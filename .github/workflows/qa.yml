@@ -1,0 +1,42 @@
+name: Agentic QA
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q tests
+      - run: docker build -f Dockerfile.sandbox -t agentic-qa-sandbox:local .
+  agentic:
+    if: github.event_name == 'workflow_dispatch'
+    needs: unit
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: docker build -f Dockerfile.sandbox -t agentic-qa-sandbox:local .
+      - name: Generate and run tests
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          BASE_URL: ${{ vars.BASE_URL }}
+          QA_SANDBOX_IMAGE: agentic-qa-sandbox:local
+        run: python main.py examples/login.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-evidence
+          path: artifacts/
