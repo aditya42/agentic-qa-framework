@@ -1,0 +1,9 @@
+Application: https://www.saucedemo.com/
+Scenario: Successful login.
+Given a user is on the login page
+When the user enters username standard_user and password secret_sauce and submits
+Then the user is navigated to the inventory page and can see products.
+Scenario: Invalid login.
+Given a user is on the login page
+When the user enters username invalid_user and password invalid_password and submits
+Then an error message is displayed and the user remains on the login page.
