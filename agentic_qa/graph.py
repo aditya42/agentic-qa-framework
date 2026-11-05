@@ -68,7 +68,7 @@ def generate(state: QAState):
     code = extract_python(response.content)
     return {"code": code, "repairs": 0}
 
-ALLOWED_IMPORTS = {"os", "pytest", "playwright"}
+ALLOWED_IMPORTS = {"os", "re", "pytest", "playwright"}
 FORBIDDEN_CALLS = {"eval", "exec", "compile", "open", "__import__"}
 
 def validate(code: str):
@@ -97,7 +97,6 @@ def execute(state: QAState):
         passed, output = sandbox_run(code, ARTIFACTS)
     except (ValueError, SyntaxError) as exc:
         passed, output = False, str(exc)
-    (ARTIFACTS / "execution.log").write_text(output, encoding="utf-8")
     if passed and state.get("repairs", 0) and state.get("original_failure"):
         again, second_output = sandbox_run(code, ARTIFACTS)
         passed = again
@@ -105,6 +104,7 @@ def execute(state: QAState):
             output += "\nRepeat validation failed:\n" + second_output
         else:
             remember(Path("artifacts/repairs.sqlite3"), state["original_failure"], code, validated=True)
+    (ARTIFACTS / "execution.log").write_text(output, encoding="utf-8")
     return {"stdout": output, "passed": passed}
 
 def diagnose(state: QAState):
