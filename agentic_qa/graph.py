@@ -50,7 +50,9 @@ def extract_python(content: str) -> str:
         if len(lines) < 3 or lines[0].strip().lower() not in ("```python", "```py", "```") or lines[-1].strip() != "```":
             raise ValueError("Malformed Python code fence")
         source = "\n".join(lines[1:-1]).strip()
-    ast.parse(source)
+    tree = ast.parse(source)
+    if not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_") for node in tree.body):
+        raise ValueError("Generated source must contain a test_ function")
     return source
 
 
