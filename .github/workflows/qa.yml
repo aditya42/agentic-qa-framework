@@ -32,6 +32,7 @@ jobs:
       - name: Generate and run tests
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL || 'openai/gpt-oss-120b' }}
           BASE_URL: ${{ vars.BASE_URL }}
           QA_SANDBOX_IMAGE: agentic-qa-sandbox:local
         run: python main.py examples/login.txt
