@@ -6,7 +6,7 @@ from typing import TypedDict
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
-from .models import Cases, Code, Diagnosis
+from .models import Cases, Diagnosis
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
 
@@ -40,14 +40,30 @@ def design(state: QAState):
         + state["requirement"] + "\nAnalysis:\n" + state["analysis"])
     return {"cases": cases}
 
+def extract_python(content: str) -> str:
+    """Normalize raw Python or a single fenced code block without executing it."""
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("Groq did not return Python source")
+    source = content.strip()
+    if source.startswith("```"):
+        lines = source.splitlines()
+        if len(lines) < 3 or lines[0].strip().lower() not in ("```python", "```py", "```") or lines[-1].strip() != "```":
+            raise ValueError("Malformed Python code fence")
+        source = "\n".join(lines[1:-1]).strip()
+    ast.parse(source)
+    return source
+
+
 def generate(state: QAState):
     prompt = ("Generate a COMPLETE Python pytest Playwright test module. Use sync_playwright and browser chromium, no plugins. "
               "Each test must accept no fixtures; open browser via sync_playwright context manager. "
               "Use BASE_URL from os.environ with default https://www.saucedemo.com. "
-              "Use role-based selectors and explicit assertions. No network requests other than browser interactions. "
+              "Use Playwright locator assertions and explicit expected outcomes. Avoid unsupported scenarios. "
               "No subprocess, eval, exec, filesystem writes, or external imports beyond os, pytest, playwright. "
-              "Return only code in the code field. Requirements: " + state["requirement"] + "\nCases: " + state["cases"].model_dump_json())
-    code = llm().with_structured_output(Code).invoke(prompt).code
+              "Return RAW Python source code ONLY. Do not wrap it in JSON, markdown or a tool call. "
+              "Requirement:\n" + state["requirement"] + "\nCases:\n" + state["cases"].model_dump_json())
+    response = llm().invoke(prompt)
+    code = extract_python(response.content)
     return {"code": code, "repairs": 0}
 
 ALLOWED_IMPORTS = {"os", "pytest", "playwright"}
