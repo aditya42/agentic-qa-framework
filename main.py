@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from agentic_qa.graph import build_graph
 from agentic_qa.integrations import publish_jira, publish_testrail
+from agentic_qa.model_access import verify_model
 
 def main():
     parser = argparse.ArgumentParser()
@@ -10,6 +11,8 @@ def main():
     parser.add_argument("--publish-testrail", action="store_true")
     parser.add_argument("--create-jira-bug", action="store_true")
     args = parser.parse_args()
+    model = verify_model()
+    print(f"Groq model access verified: {model}", flush=True)
     result = build_graph().invoke({"requirement": args.requirement.read_text(encoding="utf-8"), "repairs": 0})
     print(json.dumps({"passed": result.get("passed"), "cases": len(result["cases"].cases),
                       "repairs": result.get("repairs", 0),
