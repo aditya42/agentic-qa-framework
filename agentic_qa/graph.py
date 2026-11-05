@@ -28,7 +28,7 @@ class QAState(TypedDict, total=False):
 def llm():
     if not os.getenv("GROQ_API_KEY"):
         raise RuntimeError("Set GROQ_API_KEY in .env")
-    return ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"), temperature=0)
+    return ChatGroq(model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"), temperature=0)
 
 def analyze(state: QAState):
     response = llm().invoke("Analyze these functional acceptance criteria. Identify testable behavior, assumptions, and missing information. Do not invent requirements.\n" + state["requirement"])
