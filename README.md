@@ -72,3 +72,11 @@ The persistent directory must be access-controlled and backed up; the restricted
 ### Remaining release blockers
 
 Production network egress enforcement, immutable dependency/action/image pinning and supply-chain scanning, reviewed semantic repair gates, durable central audit/repair storage, secrets redaction across third-party outputs, robust concurrent Jira/TestRail idempotency, and verified E2E security tests. This remains a hardened prototype, **not production certified**.
+
+## Repair approval policy
+
+AI-generated repairs pass a fail-closed structural gate before re-execution. The gate requires the same test function names and unchanged assertion ASTs. Changes to assertions (including expected values), removal of tests, or altered assertion counts are blocked automatically.
+
+For a specific reviewed repair, a QE approver can create a file containing the SHA-256 digest of `original_code + "\\0" + candidate_code` (using the actual NUL byte, not a backslash string), and set `QA_REPAIR_APPROVAL_FILE` to its path. The approval authorizes that exact code pair only and never overrides the base import/code validator. Keep approval files outside untrusted test mounts and protect them through code review. This is a **manual exception process**, not automatic semantic proof.
+
+The structural gate does not prove that unchanged assertions still test the same behavior: control flow, locators, and test data can change. Therefore all generated repairs remain subject to QE review before promotion to a maintained regression suite. No automatic merge is implemented.
