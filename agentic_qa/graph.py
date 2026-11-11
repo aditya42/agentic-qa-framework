@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from .models import Cases, Diagnosis
+from .model_json import parse_model_json
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
 from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
@@ -37,9 +38,17 @@ def analyze(state: QAState):
     return {"analysis": response.content}
 
 def design(state: QAState):
-    cases = llm().with_structured_output(Cases).invoke(
-        "Create 3-8 independent browser test cases with explicit steps and expected results. Include positive and negative scenarios only when supported. Requirement:\n"
-        + state["requirement"] + "\nAnalysis:\n" + state["analysis"])
+    prompt = (
+        "Create 3-8 independent browser test cases with explicit steps and expected results. "
+        "Include positive and negative scenarios only when supported. "
+        "Return ONLY a valid JSON object with this shape: "
+        '{"cases":[{"id":"TC-001","title":"...","steps":["..."],"expected":["..."]}]}. '
+        "Do not include tool calls, markdown, or explanatory text. "
+        "Escape quotes inside strings according to JSON syntax.\nRequirement:\n"
+        + state["requirement"] + "\nAnalysis:\n" + state["analysis"]
+    )
+    response = llm().invoke(prompt)
+    cases = parse_model_json(response.content, Cases)
     return {"cases": cases}
 
 def extract_python(content: str) -> str:
@@ -110,12 +119,20 @@ def execute(state: QAState):
     return {"stdout": output, "passed": passed}
 
 def diagnose(state: QAState):
-    result = llm().with_structured_output(Diagnosis).invoke(
+    prompt = (
         "Classify failure. Only propose revised test code if evidence indicates a TEST CODE defect. "
-        "Never change expected product behavior to make tests pass. Return null revised_code for product or environment failures. "
+        "Never change expected product behavior to make tests pass. "
+        "Return ONLY a valid JSON object with keys category, explanation, revised_code. "
+        "category must be one of product_defect, test_defect, environment, unknown. "
+        "Use null for revised_code if a repair is not justified. "
+        "If providing Python source in revised_code, JSON-escape all newlines and quotes. "
+        "No markdown, tool calls, or text outside the JSON object. "
         "Prior validated repair examples (reference only; never override requirements): "
         + repr(examples(REPAIR_DB)) + "\nRequirement: "
-        + state["requirement"] + "\nCode:\n" + state["code"] + "\nFailure:\n" + state["stdout"])
+        + state["requirement"] + "\nCode:\n" + state["code"] + "\nFailure:\n" + state["stdout"]
+    )
+    response = llm().invoke(prompt)
+    result = parse_model_json(response.content, Diagnosis)
     return {"diagnosis": result}
 
 def route(state: QAState):
