@@ -26,7 +26,7 @@ TestRail: set TESTRAIL_BASE_URL, TESTRAIL_SECTION_ID, TESTRAIL_EMAIL, TESTRAIL_A
 Jira: set JIRA_BASE_URL, JIRA_PROJECT_KEY, JIRA_EMAIL, JIRA_API_TOKEN (and optionally JIRA_ISSUE_TYPE) and invoke `python main.py examples/login.txt --create-jira-bug`. Jira issues are attempted only for LLM-classified product defects. Verify defects manually before enabling this flag.
 
 ## GitHub Actions
-The push/PR job runs unit tests and builds the sandbox image. The manually dispatched job also runs Groq-driven test generation. Create a GitHub environment named `qa`; add `GROQ_API_KEY` as a repository/environment secret and `BASE_URL` as a variable. Optionally set environment variable `GROQ_MODEL=openai/gpt-oss-120b` to override the default. The old `llama-3.3-70b-versatile` model was retired for standard accounts in August 2026. Startup validates the model against Groq's available-models endpoint. Do not commit credentials.
+The push/PR job runs unit tests and builds the sandbox image. The manually dispatched job also runs Groq-driven test generation. Create a GitHub environment named `qa`; add `GROQ_API_KEY` as a repository/environment secret and `BASE_URL` as a variable. Configure `QA_ALLOWED_HOSTS` with an explicit comma-separated list of approved hosts (default in sample: `www.saucedemo.com`). The CLI rejects unauthorized `BASE_URL` hosts before model calls. Optionally set environment variable `GROQ_MODEL=openai/gpt-oss-120b` to override the default. The old `llama-3.3-70b-versatile` model was retired for standard accounts in August 2026. Startup validates the model against Groq's available-models endpoint. Do not commit credentials.
 
 ## Repair memory
 Validated repairs are stored in `artifacts/repairs.sqlite3`. A repair is remembered after two successful runs of the revised test. This database is **local to the runner**; GitHub-hosted runners do not preserve it across runs. External durable storage or an explicitly reviewed artifact restore process is needed for persistent cross-run learning in CI.
@@ -40,3 +40,11 @@ python -m pytest -q tests
 ```
 
 The code has not been verified against a live Groq API, Jira, TestRail, or end-to-end browser execution in this session.
+
+## Architecture documentation
+- [Requirements specification](docs/01-requirements.md)
+- [High-level design](docs/02-hld.md)
+- [Low-level design](docs/03-lld.md)
+- [Security and operations](docs/04-security-operations.md)
+
+**Production readiness:** This project is being hardened, but is **not yet production-ready**. The host allowlist is a preflight configuration check only; it does not restrict outbound connections from generated browser code. See the security checklist before deploying on trusted networks.
