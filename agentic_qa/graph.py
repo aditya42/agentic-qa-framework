@@ -11,6 +11,7 @@ from .model_json import parse_model_json
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
 from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
+from .structured_json import parse_model_json
 
 load_dotenv()
 ARTIFACTS = Path("artifacts")
@@ -41,15 +42,14 @@ def design(state: QAState):
     prompt = (
         "Create 3-8 independent browser test cases with explicit steps and expected results. "
         "Include positive and negative scenarios only when supported. "
-        "Return ONLY a valid JSON object with this shape: "
+        "Return exactly one JSON object of shape "
         '{"cases":[{"id":"TC-001","title":"...","steps":["..."],"expected":["..."]}]}. '
-        "Do not include tool calls, markdown, or explanatory text. "
-        "Escape quotes inside strings according to JSON syntax.\nRequirement:\n"
+        "Use JSON double quotes, no markdown fences, no comments, no tool calls. "
+        "Do not invent unsupported requirements.\nRequirement:\n"
         + state["requirement"] + "\nAnalysis:\n" + state["analysis"]
     )
     response = llm().invoke(prompt)
-    cases = parse_model_json(response.content, Cases)
-    return {"cases": cases}
+    return {"cases": parse_model_json(response.content, Cases)}
 
 def extract_python(content: str) -> str:
     """Normalize raw Python or a single fenced code block without executing it."""
