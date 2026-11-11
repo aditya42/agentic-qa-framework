@@ -10,7 +10,7 @@ from .models import Cases, Diagnosis
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
 from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
-from .structured_json import parse_model_json
+from .model_json import parse_model_json
 
 load_dotenv()
 ARTIFACTS = Path("artifacts")
