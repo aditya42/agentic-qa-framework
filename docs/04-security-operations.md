@@ -42,7 +42,7 @@
 Disable manual agentic workflow and publishing flags; rotate exposed tokens if applicable; preserve sanitized evidence and immutable hashes; identify affected runs; revoke untrusted repair examples; fix and test controls; restore only after QE and security approval.
 
 ## Current known gaps
-- Docker bridge networking is not an egress allowlist.
+- The `QA_ALLOWED_HOSTS` CLI preflight is implemented, but Docker bridge networking is not an egress allowlist.
 - AST validation is not a secure code sandbox by itself.
 - SQLite memory is ephemeral on GitHub-hosted runners.
 - Jira/TestRail publishing is not idempotent.
