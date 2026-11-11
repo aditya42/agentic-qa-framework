@@ -48,3 +48,27 @@ The code has not been verified against a live Groq API, Jira, TestRail, or end-t
 - [Security and operations](docs/04-security-operations.md)
 
 **Production readiness:** This project is being hardened, but is **not yet production-ready**. The host allowlist is a preflight configuration check only; it does not restrict outbound connections from generated browser code. See the security checklist before deploying on trusted networks.
+
+## Reliability and governance hardening
+
+- `artifacts/report.json` is a deterministic JUnit-backed run summary (run ID, requirement/code SHA-256, model, test counts and outcome).
+- `artifacts/audit.jsonl` records sanitized start/finish events. CI uploads evidence for 14 days.
+- Missing, empty or failing JUnit evidence **cannot** produce a passing result.
+- `QA_REPAIR_DB` may point to a durable SQLite volume **on a persistent self-hosted runner**. Default GitHub-hosted runs still have ephemeral learning.
+- External Jira/TestRail publishing requires `QA_PUBLISH_APPROVED=true` **and** the existing explicit CLI flag. Jira looks up an issue by stable fingerprint label; TestRail reuses a case by exact title and now requires `TESTRAIL_PROJECT_ID`. These are best-effort duplicate checks, not transaction-safe distributed idempotency.
+- `QA_SANDBOX_NETWORK` selects a Docker network; `QA_REQUIRE_ISOLATED_NETWORK=1` rejects Docker bridge/host/default. **A custom Docker network alone does not enforce egress restrictions**: deploy an actual firewall/proxy policy on an isolated runner and test it before enabling production mode.
+- The `qa` environment should require human reviewers for publishing workflows; the CLI publishing flag alone does not constitute review.
+
+### Example persistent-runner settings
+
+```bash
+export QA_REPAIR_DB=/srv/agentic-qa/repairs.sqlite3
+export QA_SANDBOX_NETWORK=qe-restricted
+export QA_REQUIRE_ISOLATED_NETWORK=1
+```
+
+The persistent directory must be access-controlled and backed up; the restricted network must be created and firewalled outside this repository. Do not set `QA_REQUIRE_ISOLATED_NETWORK=1` on GitHub-hosted runners without provisioning that network.
+
+### Remaining release blockers
+
+Production network egress enforcement, immutable dependency/action/image pinning and supply-chain scanning, reviewed semantic repair gates, durable central audit/repair storage, secrets redaction across third-party outputs, robust concurrent Jira/TestRail idempotency, and verified E2E security tests. This remains a hardened prototype, **not production certified**.
