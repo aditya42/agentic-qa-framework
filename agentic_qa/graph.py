@@ -9,6 +9,7 @@ from langgraph.graph import END, START, StateGraph
 from .models import Cases, Diagnosis
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
+from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
 
 load_dotenv()
 ARTIFACTS = Path("artifacts")
@@ -126,11 +127,23 @@ def repair(state: QAState):
     diagnosis = state["diagnosis"]
     if diagnosis.category != "test_defect" or not diagnosis.revised_code:
         return {"repairs": 1}
-    return {"code": diagnosis.revised_code, "repairs": 1,
-            "original_failure": state["stdout"], "repaired_code": diagnosis.revised_code}
+    candidate = diagnosis.revised_code
+    try:
+        validate_repair(state["code"], candidate)
+    except (RepairApprovalRequired, ValueError, SyntaxError) as exc:
+        # A human-reviewed, code-bound approval can authorize a specific
+        # assertion rewrite, but never bypasses the base code policy.
+        if not is_approved(state["code"], candidate):
+            return {"repairs": 1, "stdout": "Repair blocked: " + str(exc)}
+        try:
+            validate(candidate)
+        except (ValueError, SyntaxError) as invalid:
+            return {"repairs": 1, "stdout": "Repair blocked by code policy: " + str(invalid)}
+    return {"code": candidate, "repairs": 1,
+            "original_failure": state["stdout"], "repaired_code": candidate}
 
 def after_repair(state: QAState):
-    if state["diagnosis"].category == "test_defect" and state["diagnosis"].revised_code:
+    if state.get("repaired_code") and state.get("repairs", 0) == 1:
         return "execute"
     return "end"
 
