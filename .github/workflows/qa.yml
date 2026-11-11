@@ -22,6 +22,9 @@ jobs:
     needs: unit
     runs-on: ubuntu-latest
     environment: qa
+    concurrency:
+      group: agentic-qa-publish
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,9 +39,12 @@ jobs:
           BASE_URL: ${{ vars.BASE_URL }}
           QA_ALLOWED_HOSTS: ${{ vars.QA_ALLOWED_HOSTS || 'www.saucedemo.com' }}
           QA_SANDBOX_IMAGE: agentic-qa-sandbox:local
+          QA_SANDBOX_NETWORK: ${{ vars.QA_SANDBOX_NETWORK || 'bridge' }}
+          QA_REQUIRE_ISOLATED_NETWORK: ${{ vars.QA_REQUIRE_ISOLATED_NETWORK || '0' }}
         run: python main.py examples/login.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: qa-evidence
           path: artifacts/
+          retention-days: 14
