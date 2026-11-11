@@ -31,7 +31,7 @@ Convert authorized, version-controlled functional requirements into traceable au
 | FR-12 | Publish to Jira/TestRail on explicit opt-in | P1 | Credentials scoped; duplicate suppression and retry policy | Partial; duplicate suppression absent |
 | FR-13 | Persist validated repair knowledge across CI runs | P1 | Durable, versioned, reviewable, revocable records | Planned; local SQLite only |
 | FR-14 | Support GitHub Actions invocation | P0 | Manual QA run and automatic static/unit CI | Implemented |
-| FR-15 | Enforce approved target host | P0 | Reject unauthorized or production target before browser starts | Planned |
+| FR-15 | Enforce approved target host | P0 | Reject unauthorized or production target before browser starts | Partial: CLI preflight only; no egress enforcement |
 | FR-16 | Export run summary and audit trail | P0 | Run ID, model ID, input hash, code hash, result, decisions | Planned |
 
 ## 4. Nonfunctional requirements
