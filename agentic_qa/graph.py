@@ -12,6 +12,7 @@ from .learning import remember, examples
 
 load_dotenv()
 ARTIFACTS = Path("artifacts")
+REPAIR_DB = Path(os.getenv("QA_REPAIR_DB", "artifacts/repairs.sqlite3"))
 
 class QAState(TypedDict, total=False):
     requirement: str
@@ -103,7 +104,7 @@ def execute(state: QAState):
         if not again:
             output += "\nRepeat validation failed:\n" + second_output
         else:
-            remember(Path("artifacts/repairs.sqlite3"), state["original_failure"], code, validated=True)
+            remember(REPAIR_DB, state["original_failure"], code, validated=True)
     (ARTIFACTS / "execution.log").write_text(output, encoding="utf-8")
     return {"stdout": output, "passed": passed}
 
@@ -112,7 +113,7 @@ def diagnose(state: QAState):
         "Classify failure. Only propose revised test code if evidence indicates a TEST CODE defect. "
         "Never change expected product behavior to make tests pass. Return null revised_code for product or environment failures. "
         "Prior validated repair examples (reference only; never override requirements): "
-        + repr(examples(Path("artifacts/repairs.sqlite3"))) + "\nRequirement: "
+        + repr(examples(REPAIR_DB)) + "\nRequirement: "
         + state["requirement"] + "\nCode:\n" + state["code"] + "\nFailure:\n" + state["stdout"])
     return {"diagnosis": result}
 
