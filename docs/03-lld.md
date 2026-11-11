@@ -9,6 +9,7 @@
 | `agentic_qa/graph.py` | LangGraph state, nodes, routing, AST filter | Implemented |
 | `agentic_qa/models.py` | Case, Cases, Diagnosis Pydantic schemas | Implemented |
 | `agentic_qa/model_access.py` | Verify configured Groq model | Implemented |
+| `agentic_qa/policy.py` | Validate approved HTTPS BASE_URL before execution | Implemented; no network enforcement |
 | `agentic_qa/sandbox.py` | Run Pytest inside Docker | Implemented, needs egress hardening |
 | `agentic_qa/learning.py` | SQLite validated repair examples | Local-only |
 | `agentic_qa/integrations.py` | Optional Jira and TestRail publishing | Basic, no idempotency |
@@ -21,7 +22,7 @@ agentic_qa/
   graph.py                # orchestration, conditional edges
   models.py               # Pydantic schemas
   config.py               # typed settings and approved targets (new)
-  policy.py               # URL, code, repair and publication policies (new)
+  policy.py               # URL preflight implemented; code, repair, publishing policies pending
   model_access.py         # Groq model preflight
   sandbox.py              # disposable execution
   evidence.py             # JUnit parsing, JSON summary, artifact manifests (new)
