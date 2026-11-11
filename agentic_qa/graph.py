@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from .models import Cases, Diagnosis
-from .model_json import parse_model_json
 from .sandbox import run as sandbox_run
 from .learning import remember, examples
 from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
