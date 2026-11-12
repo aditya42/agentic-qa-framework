@@ -61,3 +61,24 @@ def test_without_explicit_scenarios_preserves_generic_generation():
     assert specified_scenarios("Verify successful login") == []
     with patch("agentic_qa.graph.llm", return_value=fake_model([case("Login works", 1)])):
         assert len(design({"requirement": "Verify successful login", "analysis": ""})["cases"].cases) == 1
+
+def test_generation_rejects_extra_test_function():
+    from agentic_qa.graph import generate
+    source = (
+        "def test_login():\\n    assert True\\n\\n"
+        "def test_unrequested_logout():\\n    assert True"
+    )
+    cases = SimpleNamespace(model_dump_json=lambda: "{}", cases=[1])
+    with patch("agentic_qa.graph.llm", return_value=SimpleNamespace(
+            invoke=lambda _: SimpleNamespace(content=source))):
+        with pytest.raises(ValueError, match="unrequested or missing"):
+            generate({"requirement": "Only login", "cases": cases})
+
+
+def test_generation_accepts_exact_test_count():
+    from agentic_qa.graph import generate
+    source = "def test_login():\\n    assert True"
+    cases = SimpleNamespace(model_dump_json=lambda: "{}", cases=[1])
+    with patch("agentic_qa.graph.llm", return_value=SimpleNamespace(
+            invoke=lambda _: SimpleNamespace(content=source))):
+        assert "def test_login" in generate({"requirement": "Login", "cases": cases})["code"]
