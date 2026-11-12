@@ -1,5 +1,6 @@
 import ast
 import os
+import re
 from pathlib import Path
 from typing import TypedDict
 
@@ -38,18 +39,52 @@ def analyze(state: QAState):
     response = llm().invoke("Analyze these functional acceptance criteria. Identify testable behavior, assumptions, and missing information. Do not invent requirements.\n" + state["requirement"])
     return {"analysis": response.content}
 
+def specified_scenarios(requirement: str) -> list[str]:
+    """Return explicit Scenario headings; never infer scenarios from unrelated prose."""
+    return [
+        match.group(1).strip()
+        for line in requirement.splitlines()
+        if (match := re.match(r"^\\s*Scenario:\\s*(\\S.*)$", line, re.IGNORECASE))
+    ]
+
+
 def design(state: QAState):
+    scenarios = specified_scenarios(state["requirement"])
+    if len(scenarios) > 12:
+        raise ValueError("The request contains more than 12 explicit scenarios")
+    scope = (
+        f"Exactly {len(scenarios)} cases: one for each explicit Scenario, in the same order. "
+        "Use the exact scenario heading as each case title, without adding other scenarios. "
+        "Explicit scenario headings: " + repr(scenarios) + ". "
+        if scenarios else
+        "Create 1-8 cases justified by the supplied acceptance criteria only. "
+    )
     prompt = (
-        "Create 3-8 independent browser test cases with explicit steps and expected results. "
-        "Include positive and negative scenarios only when supported. "
+        "Design independent browser test cases with steps and expected results. "
+        + scope +
+        "Do not add exploratory, boundary, logout, or negative scenarios unless explicitly "
+        "requested or required by the supplied acceptance criteria. "
+        "Analysis is advisory; the original requirement is authoritative. "
         "Return exactly one JSON object of shape "
         '{"cases":[{"id":"TC-001","title":"...","steps":["..."],"expected":["..."]}]}. '
         "Use JSON double quotes, no markdown fences, no comments, no tool calls. "
-        "Do not invent unsupported requirements.\nRequirement:\n"
-        + state["requirement"] + "\nAnalysis:\n" + state["analysis"]
+        "Do not invent unsupported requirements.\\nRequirement:\\n"
+        + state["requirement"] + "\\nAnalysis:\\n" + state["analysis"]
     )
     response = llm().invoke(prompt)
-    return {"cases": parse_model_json(response.content, Cases)}
+    cases = parse_model_json(response.content, Cases)
+    if scenarios:
+        if len(cases.cases) != len(scenarios):
+            raise ValueError(
+                f"Test design returned {len(cases.cases)} cases for {len(scenarios)} "
+                "explicit scenarios; refusing unrequested test cases"
+            )
+        if any(
+            case.title.strip().casefold() != heading.casefold()
+            for case, heading in zip(cases.cases, scenarios)
+        ):
+            raise ValueError("Test design changed explicit scenario titles or order")
+    return {"cases": cases}
 
 def extract_python(content: str) -> str:
     """Normalize raw Python or a single fenced code block without executing it."""
