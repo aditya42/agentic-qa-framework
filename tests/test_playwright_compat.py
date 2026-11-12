@@ -54,3 +54,18 @@ def test_unrelated_expect_call_is_not_changed():
     custom.to_have_text(lambda txt: "foo" in txt)
 '''
     assert normalize_playwright_assertions(source) == source
+
+
+def test_generate_normalizes_response_before_execution(monkeypatch):
+    from types import SimpleNamespace
+    from agentic_qa import graph
+    raw = '''from playwright.sync_api import expect
+def test_login():
+    expect(error).to_have_text(lambda txt: "Epic sadface" in txt)
+'''
+    fake_llm = SimpleNamespace(invoke=lambda _prompt: SimpleNamespace(content=raw))
+    monkeypatch.setattr(graph, "llm", lambda: fake_llm)
+    cases = SimpleNamespace(model_dump_json=lambda: '{"cases":[]}')
+    result = graph.generate({"requirement": "Check login error", "cases": cases})
+    assert ".to_contain_text('Epic sadface')" in result["code"]
+    assert "lambda" not in result["code"]
