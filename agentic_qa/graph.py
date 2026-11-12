@@ -108,12 +108,24 @@ def generate(state: QAState):
               "Use BASE_URL from os.environ with default https://www.saucedemo.com. "
               "Use Playwright locator assertions and explicit expected outcomes. For substring checks use "
               "expect(locator).to_contain_text(\"expected substring\"); never pass a lambda to "
-              "to_have_text() or to_contain_text(). Avoid unsupported scenarios. "
+              "to_have_text() or to_contain_text(). Generate exactly one top-level test_ function "
+              "per approved case, without additional test scenarios. "
               "No subprocess, eval, exec, filesystem writes, or external imports beyond os, pytest, playwright. "
               "Return RAW Python source code ONLY. Do not wrap it in JSON, markdown or a tool call. "
               "Requirement:\n" + state["requirement"] + "\nCases:\n" + state["cases"].model_dump_json())
     response = llm().invoke(prompt)
     code = normalize_playwright_assertions(extract_python(response.content))
+    expected = len(state["cases"].cases)
+    actual = sum(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+        for node in ast.parse(code).body
+    )
+    if actual != expected:
+        raise ValueError(
+            f"Generated {actual} tests for {expected} approved cases; "
+            "refusing unrequested or missing tests"
+        )
     return {"code": code, "repairs": 0}
 
 ALLOWED_IMPORTS = {"os", "re", "pytest", "playwright"}
