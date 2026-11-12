@@ -44,7 +44,7 @@ def specified_scenarios(requirement: str) -> list[str]:
     return [
         match.group(1).strip()
         for line in requirement.splitlines()
-        if (match := re.match(r"^\\s*Scenario:\\s*(\\S.*)$", line, re.IGNORECASE))
+        if (match := re.match(r"^\s*Scenario:\s*(\S.*)$", line, re.IGNORECASE))
     ]
 
 
@@ -68,8 +68,8 @@ def design(state: QAState):
         "Return exactly one JSON object of shape "
         '{"cases":[{"id":"TC-001","title":"...","steps":["..."],"expected":["..."]}]}. '
         "Use JSON double quotes, no markdown fences, no comments, no tool calls. "
-        "Do not invent unsupported requirements.\\nRequirement:\\n"
-        + state["requirement"] + "\\nAnalysis:\\n" + state["analysis"]
+        "Do not invent unsupported requirements.\nRequirement:\n"
+        + state["requirement"] + "\nAnalysis:\n" + state["analysis"]
     )
     response = llm().invoke(prompt)
     cases = parse_model_json(response.content, Cases)
