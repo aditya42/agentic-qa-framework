@@ -18,9 +18,18 @@ def _tests(tree):
             and node.name.startswith("test_")}
 
 def _assertions(node):
-    return [n for n in ast.walk(node)
-            if isinstance(n, ast.Assert)
-            or isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "expect"]
+    """Collect complete assertion calls, not merely the inner expect(locator)."""
+    matches = []
+    for item in ast.walk(node):
+        if isinstance(item, ast.Assert):
+            matches.append(item)
+        elif isinstance(item, ast.Call) and isinstance(item.func, ast.Attribute):
+            receiver = item.func.value
+            if (isinstance(receiver, ast.Call)
+                    and isinstance(receiver.func, ast.Name)
+                    and receiver.func.id == "expect"):
+                matches.append(item)
+    return matches
 
 def _calls(node):
     return [n for n in ast.walk(node) if isinstance(n, ast.Call)]
@@ -32,8 +41,11 @@ def _is_literal_change(before, after):
 def validate_repair(original: str, candidate: str) -> str:
     from .graph import validate
     validate(candidate)
-    old = ast.parse(original)
-    new = ast.parse(candidate)
+    from .playwright_compat import normalize_playwright_assertions
+    # Normalize only one audited equivalent Playwright API rewrite, on both sides.
+    # Other changes to assertion methods, operands or expected strings still block.
+    old = ast.parse(normalize_playwright_assertions(original))
+    new = ast.parse(normalize_playwright_assertions(candidate))
     old_tests, new_tests = _tests(old), _tests(new)
     if not old_tests or old_tests.keys() != new_tests.keys():
         raise RepairApprovalRequired("Repair changed the test inventory")
@@ -42,8 +54,8 @@ def validate_repair(original: str, candidate: str) -> str:
         before, after = _assertions(old_test), _assertions(new_test)
         if len(before) != len(after):
             raise RepairApprovalRequired(f"Repair changed assertion count in {name}")
-        # Assertion AST is allowed to change only with explicit manual approval.
-        # This blocks changing expectations and unsafe automatic assertion rewrites.
+        # Entire assertion expressions must match after approved normalization.
+        # This rejects changed expected values and removal of Playwright checks.
         if any(_is_literal_change(a, b) for a, b in zip(before, after)):
             raise RepairApprovalRequired(f"Repair changed assertion expression in {name}")
     return candidate
