@@ -65,8 +65,8 @@ def test_without_explicit_scenarios_preserves_generic_generation():
 def test_generation_rejects_extra_test_function():
     from agentic_qa.graph import generate
     source = (
-        "def test_login():\\n    assert True\\n\\n"
-        "def test_unrequested_logout():\\n    assert True"
+        "def test_login():\n    assert True\n\n"
+        "def test_unrequested_logout():\n    assert True"
     )
     cases = SimpleNamespace(model_dump_json=lambda: "{}", cases=[1])
     with patch("agentic_qa.graph.llm", return_value=SimpleNamespace(
@@ -77,7 +77,7 @@ def test_generation_rejects_extra_test_function():
 
 def test_generation_accepts_exact_test_count():
     from agentic_qa.graph import generate
-    source = "def test_login():\\n    assert True"
+    source = "def test_login():\n    assert True"
     cases = SimpleNamespace(model_dump_json=lambda: "{}", cases=[1])
     with patch("agentic_qa.graph.llm", return_value=SimpleNamespace(
             invoke=lambda _: SimpleNamespace(content=source))):
