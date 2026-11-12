@@ -46,3 +46,36 @@ def test_code_bound_approval(tmp_path):
     path.write_text(digest + "\n")
     assert is_approved(ORIGINAL, WEAKENED, str(path))
     assert not is_approved(ORIGINAL, SAFE, str(path))
+
+
+def test_equivalent_playwright_lambda_rewrite_is_approved_automatically():
+    original = '''def test_error():
+    expect(error).to_have_text(lambda txt: "Username is required" in txt)
+'''
+    revised = '''def test_error():
+    expect(error).to_contain_text("Username is required")
+'''
+    assert validate_repair(original, revised) == revised
+
+
+def test_playwright_expected_text_change_requires_approval():
+    original = '''def test_error():
+    expect(error).to_contain_text("Username is required")
+'''
+    weakened = '''def test_error():
+    expect(error).to_contain_text("something else")
+'''
+    with pytest.raises(RepairApprovalRequired, match="assertion"):
+        validate_repair(original, weakened)
+
+
+def test_playwright_assertion_removal_requires_approval():
+    original = '''def test_error():
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Username is required")
+'''
+    weakened = '''def test_error():
+    expect(error).to_be_visible()
+'''
+    with pytest.raises(RepairApprovalRequired, match="assertion"):
+        validate_repair(original, weakened)
