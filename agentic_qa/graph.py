@@ -11,6 +11,7 @@ from .sandbox import run as sandbox_run
 from .learning import remember, examples
 from .repair_policy import validate_repair, RepairApprovalRequired, is_approved
 from .model_json import parse_model_json
+from .playwright_compat import normalize_playwright_assertions
 
 load_dotenv()
 ARTIFACTS = Path("artifacts")
@@ -70,12 +71,14 @@ def generate(state: QAState):
     prompt = ("Generate a COMPLETE Python pytest Playwright test module. Use sync_playwright and browser chromium, no plugins. "
               "Each test must accept no fixtures; open browser via sync_playwright context manager. "
               "Use BASE_URL from os.environ with default https://www.saucedemo.com. "
-              "Use Playwright locator assertions and explicit expected outcomes. Avoid unsupported scenarios. "
+              "Use Playwright locator assertions and explicit expected outcomes. For substring checks use "
+              "expect(locator).to_contain_text(\"expected substring\"); never pass a lambda to "
+              "to_have_text() or to_contain_text(). Avoid unsupported scenarios. "
               "No subprocess, eval, exec, filesystem writes, or external imports beyond os, pytest, playwright. "
               "Return RAW Python source code ONLY. Do not wrap it in JSON, markdown or a tool call. "
               "Requirement:\n" + state["requirement"] + "\nCases:\n" + state["cases"].model_dump_json())
     response = llm().invoke(prompt)
-    code = extract_python(response.content)
+    code = normalize_playwright_assertions(extract_python(response.content))
     return {"code": code, "repairs": 0}
 
 ALLOWED_IMPORTS = {"os", "re", "pytest", "playwright"}
