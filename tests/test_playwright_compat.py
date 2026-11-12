@@ -65,7 +65,7 @@ def test_login():
 '''
     fake_llm = SimpleNamespace(invoke=lambda _prompt: SimpleNamespace(content=raw))
     monkeypatch.setattr(graph, "llm", lambda: fake_llm)
-    cases = SimpleNamespace(model_dump_json=lambda: '{"cases":[]}')
+    cases = SimpleNamespace(model_dump_json=lambda: '{"cases":[{"id":"TC-001"}]}', cases=[1])
     result = graph.generate({"requirement": "Check login error", "cases": cases})
     assert ".to_contain_text('Epic sadface')" in result["code"]
     assert "lambda" not in result["code"]
