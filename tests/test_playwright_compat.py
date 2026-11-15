@@ -69,3 +69,28 @@ def test_login():
     result = graph.generate({"requirement": "Check login error", "cases": cases})
     assert ".to_contain_text('Epic sadface')" in result["code"]
     assert "lambda" not in result["code"]
+
+
+def test_url_equality_lambda_normalized():
+    source = """def test_login():
+    expect(page).to_have_url(lambda url: url == "https://www.saucedemo.com/inventory.html")
+"""
+    updated = normalize_playwright_assertions(source)
+    assert "to_have_url('https://www.saucedemo.com/inventory.html')" in updated
+    assert "lambda" not in updated
+    assert normalize_playwright_assertions(updated) == updated
+
+
+def test_url_non_equivalent_lambda_not_relaxed():
+    source = """def test_login():
+    expect(page).to_have_url(lambda url: url.startswith("https://www.saucedemo.com"))
+    expect(page).to_have_url(lambda url: url.endswith("inventory.html"))
+"""
+    assert normalize_playwright_assertions(source) == source
+
+
+def test_literal_url_trailing_slash_remains_exact():
+    source = """def test_login():
+    expect(page).to_have_url("https://www.saucedemo.com")
+"""
+    assert normalize_playwright_assertions(source) == source
