@@ -1,0 +1,33 @@
+name: MCP Release Qualification
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'ID of reviewed evidence snapshot'
+        required: true
+        default: demo-1
+  repository_dispatch:
+    types: [qa-release-candidate]
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-release.txt
+      - name: Qualify release using MCP evidence
+        env:
+          QA_MCP_COMMAND: python
+          QA_MCP_ARGS_JSON: '["-m", "agentic_qa.mcp_server"]'
+          RELEASE_ID: ${{ github.event.inputs.release_id || github.event.client_payload.release_id }}
+        run: python release_cli.py qualify "$RELEASE_ID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-qualification-evidence
+          path: artifacts/release/
+          retention-days: 14

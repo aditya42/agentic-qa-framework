@@ -1,0 +1,30 @@
+{
+  "release_id": "demo-1",
+  "defects": [
+    {
+      "id": "BUG-1",
+      "severity": "Sev3",
+      "status": "Open"
+    }
+  ],
+  "required_tests": [
+    "TC-001",
+    "TC-002"
+  ],
+  "executed_tests": [
+    "TC-001",
+    "TC-002"
+  ],
+  "report": {
+    "status": "passed",
+    "execution": {
+      "status": "valid",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "failures": []
+}
