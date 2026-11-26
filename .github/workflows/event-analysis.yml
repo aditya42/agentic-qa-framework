@@ -1,0 +1,33 @@
+name: QA Event Analysis
+on:
+  repository_dispatch:
+    types: [qa-jira-defect, qa-coverage, qa-flakiness]
+  workflow_dispatch:
+    inputs:
+      event_json:
+        description: Typed event JSON
+        required: true
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-release.txt
+      - name: Route event
+        env:
+          EVENT_JSON: ${{ inputs.event_json || toJSON(github.event.client_payload) }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL || 'openai/gpt-oss-120b' }}
+        run: |
+          printf '%s' "$EVENT_JSON" > /tmp/event.json
+          python event_cli.py /tmp/event.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-event-analysis
+          path: artifacts/event/
