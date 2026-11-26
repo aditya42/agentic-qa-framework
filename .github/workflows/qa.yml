@@ -1,6 +1,8 @@
 name: Agentic QA
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '30 20 * * *'
   pull_request:
   push:
     branches: [main]
@@ -14,11 +16,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-release.txt
       - run: python -m pytest -q tests
+      - name: MCP integration smoke test
+        env:
+          QA_MCP_COMMAND: python
+          QA_MCP_ARGS_JSON: '["-m", "agentic_qa.mcp_server"]'
+        run: python release_cli.py qualify demo-1 --output /tmp/mcp-smoke
       - run: docker build -f Dockerfile.sandbox -t agentic-qa-sandbox:local .
   agentic:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     needs: unit
     runs-on: ubuntu-latest
     environment: qa
@@ -42,6 +49,20 @@ jobs:
           QA_SANDBOX_NETWORK: ${{ vars.QA_SANDBOX_NETWORK || 'bridge' }}
           QA_REQUIRE_ISOLATED_NETWORK: ${{ vars.QA_REQUIRE_ISOLATED_NETWORK || '0' }}
         run: python main.py examples/login.txt
+      - name: Diagnose failed execution
+        if: failure()
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL || 'openai/gpt-oss-120b' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("artifacts/execution.log")
+          evidence = {"log": p.read_text(errors="replace")[-16000:] if p.exists() else "No execution log; inspect CI setup"}
+          Path("/tmp/qa-event.json").write_text(json.dumps({"kind":"ci_failure","event_id":os.environ["GITHUB_RUN_ID"],"evidence":evidence}))
+          PY
+          python event_cli.py /tmp/qa-event.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
