@@ -80,3 +80,7 @@ AI-generated repairs pass a fail-closed structural gate before re-execution. The
 For a specific reviewed repair, a QE approver can create a file containing the SHA-256 digest of `original_code + "\\0" + candidate_code` (using the actual NUL byte, not a backslash string), and set `QA_REPAIR_APPROVAL_FILE` to its path. The approval authorizes that exact code pair only and never overrides the base import/code validator. Keep approval files outside untrusted test mounts and protect them through code review. This is a **manual exception process**, not automatic semantic proof.
 
 The structural gate does not prove that unchanged assertions still test the same behavior: control flow, locators, and test data can change. Therefore all generated repairs remain subject to QE review before promotion to a maintained regression suite. No automatic merge is implemented.
+
+## MCP-enabled release qualification (prototype)
+
+A separate LangGraph workflow retrieves defect evidence, test coverage, and failure diagnostics through typed MCP tools, records qualification events, and blocks release recommendations on missing tests, invalid JUnit evidence or unresolved high-severity defects. An explicit, evidence-bound human review is required; no deployment action is implemented. See [MCP release-qualification guide](docs/05-mcp-release-qualification.md) and run `python release_cli.py qualify demo-1` after installing `requirements-release.txt` and configuring the MCP server.
