@@ -1,6 +1,8 @@
 name: Agentic QA
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '30 20 * * *'
   pull_request:
   push:
     branches: [main]
@@ -14,11 +16,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-release.txt
       - run: python -m pytest -q tests
+      - name: MCP integration smoke test
+        env:
+          QA_MCP_COMMAND: python
+          QA_MCP_ARGS_JSON: '["-m", "agentic_qa.mcp_server"]'
+        run: python release_cli.py qualify demo-1 --output /tmp/mcp-smoke
       - run: docker build -f Dockerfile.sandbox -t agentic-qa-sandbox:local .
   agentic:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     needs: unit
     runs-on: ubuntu-latest
     environment: qa
